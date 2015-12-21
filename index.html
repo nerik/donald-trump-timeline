@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="./favicon.ico">
+
+    <title>Donald Trump</title>
+
+    <link rel="stylesheet" href="http://libs.cartocdn.com/cartodb.js/v3/3.15/themes/css/cartodb.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="bootstrap-slider.min.css">
+
+    <link rel="icon" type="image/png" href="./favicon.png">
+  </head>
+
+  <style>
+    html, body, #container {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      padding-top: 100px;
+    }
+
+    #map {
+      width: auto;
+      height: 100%;
+    }
+
+    .navbar {
+      min-height: 100px;
+    }
+
+    #dateSlider {
+      margin-top: 40px;
+    }
+
+    .slider.slider-horizontal {
+      width: 350px;
+    }
+
+    .togglePause-btn-top {
+      width: 200px;
+      height: 50px;
+      margin: 20px;
+    }
+
+    .trump-marker img {
+      width: 26px;
+      margin-left: -8px;
+    }
+
+
+  </style>
+
+  <body>
+
+    <nav class="navbar navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">Donald Trump timeline<br>Currently showing: <span class="titledate"></span></a>
+        </div>
+        <div class="collapse navbar-collapse">
+          <ul class="nav navbar-nav navbar-right">
+            <li>
+              <input id="dateSlider" data-slider-id='dateSlider' type="text" data-slider-min="0" data-slider-max="20" data-slider-step="1" data-slider-value="14"/>
+            </li>
+            <li>
+               <button type="button" class="btn btn-primary js-togglePause togglePause-btn-top"></button>
+          </ul>
+        </diV>
+      </div>
+    </nav>
+
+    <div id="container">
+
+      <div id="map">
+          <div class="legend"></div>
+      </div>
+
+    </div><!-- /.container -->
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="http://libs.cartocdn.com/cartodb.js/v3/3.15/cartodb.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+    <script src="bootstrap-slider.min.js"></script>
+
+    <script type="text/template" class="choroSQLTemplate">
+      SELECT DISTINCT
+      ON (state)
+      rep_polls_1.cartodb_id,
+      _1st, _2nd, _3rd,
+      state,
+      date,
+      ne_50m_admin_1_states.the_geom,
+      ne_50m_admin_1_states.the_geom_webmercator
+      FROM rep_polls_1, ne_50m_admin_1_states
+      WHERE date < '<%= end %>'
+      AND date > '<%= start %>'
+      AND ne_50m_admin_1_states.name = rep_polls_1.state
+      ORDER BY state, date DESC
+    </script>
+
+    <script type="text/template" class="quotesSQLTemplate">
+      SELECT
+      *,
+      ST_X(the_geom) as lon,
+      ST_Y(the_geom) as lat
+      FROM trump_quotes
+      WHERE date < '<%= end %>'
+      AND date > '<%= start %>'
+      AND the_geom IS NOT NULL
+      ORDER BY date ASC
+    </script>
+
+
+
+
+    <script type="text/template" class="cartoTemplate">
+      @pattern: url(https://raw.githubusercontent.com/nerik/cartodb-sandbox/master/trump/pattern2.png);
+
+      <% // cartocss variables %>
+      <% candidates.forEach(function(candidate){ %>
+        @<%= candidate.name %>: <%= candidate.value %>;
+      <% }) %>
+
+      #rep_polls_1 {
+        polygon-opacity: 1;
+        polygon-fill: #FF0FFF;
+
+        <% var hachureIndex = 0; %>
+
+        <% // basic choropleth %>
+        <% candidates.forEach(function(candidate){ %>
+          [_1st=~'.*<%= candidate.name %>.*']{
+             polygon-fill: @<%= candidate.name %>;
+
+             <% // for each candidate, generate a hachure style for 2nd candidate %>
+             <% candidates.forEach(function(secondCandidate){ %>
+                <% if (candidate !== secondCandidate){ %>
+                  <% hachureIndex++; %>
+                  [_2nd=~'.*<%= secondCandidate.name %>.*'][_3rd='']::hachures<%= hachureIndex %> {
+                     polygon-pattern-file: @pattern;
+                     image-filters:colorize-alpha(@<%= secondCandidate.name %>);
+                  }
+                <% } %>
+            <% }) %>
+           }
+        <% }) %>
+
+        [_3rd!=''] {
+          polygon-fill: #AAA;
+        }
+
+        ::lines {
+           line-color: #FFF;
+           line-width: 1;
+           line-opacity: 1;
+        }
+
+        [state='Iowa']::lines2,
+        [state='New Hampshire']::lines2 {
+           line-color: #000000;
+           line-width: 2;
+        }
+      }
+    </script>
+
+
+    <script type="text/template" class="quotesPopupTemplate">
+      <h4><em><%= date %></em></h4>
+      <h4><em><%= city %>, <%= state %></em></h4>
+      <h2><%= content %></h2>
+      <button type="button" class="btn btn-primary js-togglePause">► resume playing</button>
+    </script>
+
+
+
+
+    <script>
+
+    var map = new L.Map('map', {
+      center: [40.1,-100.3],
+      zoom: 4
+    });
+
+    L.tileLayer('http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, &copy; <a href="http://cartodb.com/attributions">CartoDB</a>'
+    }).addTo(map);
+
+
+    var dateAmplitudeDays = 190;
+    var candidates = [
+      {name:'Trump',  value:'#ff9cce'},
+      {name:'Carson',  value:'#00ff00'},
+      {name:'Cruz',  value:'#F11810'},
+      {name:'Paul',  value:'#FF9900'},
+      {name:'Huckabee',  value:'#ffff80'},
+      {name:'Bush',  value:'#5CA2D1'},
+      {name:'Walker', value: '#229A00'},
+      {name: 'Kasich', value: '#A16234'}
+    ];
+
+    var additionalLegendData = [
+      {name:'3 or more candidates statistically tied for the lead',  value:'#aaa'},
+      {name:'No polling data in last six months',  value:'#fff'},
+    ]
+
+
+    var choroplethSubLayer, quotesLayer, slider, autoNextDayInterval;
+    var choroSQLTemplate = _.template($( ".choroSQLTemplate" ).html());
+    var quotesSQLTemplate = _.template($( ".quotesSQLTemplate" ).html());
+    var quotesPopupTemplate = _.template($( ".quotesPopupTemplate" ).html());
+    var cartoTemplate = _.template($( ".cartoTemplate" ).html());
+    var previousQueriedChoroMoment;
+
+
+    var getMomentFromSlider = function (v) {
+      return moment().subtract(dateAmplitudeDays - v, 'days');
+    }
+
+    var initUI = function () {
+      slider = new Slider("#dateSlider", {
+      	formatter: function(value) {
+          var m = getMomentFromSlider(value);
+      		return m.format('LL');
+      	},
+        min: 0,
+        max: dateAmplitudeDays,
+        value: 0
+      }).on('slideStop', function(e) {
+        changeDate(slider.getValue());
+      }).on('slide', function (e) {
+        pause();
+      });
+
+      $('body').on('click', '.js-togglePause', function() {
+        togglePause();
+      });
+
+      // legend
+      new cdb.geo.ui.Legend.Custom({
+        title: "1st and 2nd place in the polls",
+        data: candidates.concat(additionalLegendData)
+      }).addTo(".legend");
+
+    }
+
+    var togglePause = function () {
+      if (autoNextDayInterval) {
+        pause();
+      } else {
+        resume();
+      }
+    }
+
+    var resume = function () {
+      clearInterval(autoNextDayInterval);
+      autoNextDayInterval = setInterval(nextDay, 2000);
+      $('.js-togglePause').html('▌▌ pause')
+    }
+
+    var pause = function () {
+      clearInterval(autoNextDayInterval);
+      autoNextDayInterval = null;
+      $('.js-togglePause').html('► resume playing')
+
+    }
+
+    var nextDay = function () {
+      var sliderValue = slider.getValue()+1;
+      if (sliderValue > dateAmplitudeDays) {
+        return;
+      }
+      changeDate(sliderValue);
+      slider.setValue(sliderValue);
+    }
+
+    var changeDate = function (sliderValue) {
+      var m = getMomentFromSlider(sliderValue);
+      var sqlDateEnd = m.format('YYYY-MM-DD');
+      var sqlDateStart = m.clone().subtract(6, 'months').format('YYYY-MM-DD');
+      var dates = {
+        start: sqlDateStart,
+        end: sqlDateEnd
+      };
+
+      $('.titledate').html(m.format('LL'));
+
+      // prevents a new SQL query on the choro map for dates too close
+      if (!previousQueriedChoroMoment || Math.abs(m.diff(previousQueriedChoroMoment, 'days')) > 10) {
+        console.log('upd sql')
+        previousQueriedChoroMoment = m.clone();
+        var choroSQL = choroSQLTemplate(dates);
+        choroplethSubLayer.setSQL(choroSQL);
+      }
+
+      var quotesSQL = quotesSQLTemplate(dates)
+      $.getJSON('https://nerik.cartodb.com/api/v2/sql/?q=' + quotesSQL, function(data) {
+        showMarkers(data.rows);
+      });
+    }
+
+    function showMarkers(quotes) {
+      var previousNumMarkers;
+      if (quotesLayer) {
+        previousNumMarkers = quotesLayer.getLayers().length;
+        map.removeLayer(quotesLayer);
+      };
+      var markers = quotes.map(function (quote) {
+        var marker = L.marker([quote.lat, quote.lon], {
+          icon: L.divIcon({
+            className: 'trump-marker',
+            html: '<img src="trumpface.png">'
+          })
+        }).bindPopup( quotesPopupTemplate({
+          date: moment(quote.date).format('LL'),
+          city: quote.city,
+          state: quote.state,
+          content: quote.content.replace(/\[(.+)\]\((.+)\)/gi, '<a href=$2>$1</a>')
+        })).on('click', function () {
+          pause();
+        });
+        marker.quote = quote;
+        return marker;
+      })
+      quotesLayer = L.layerGroup(markers).addTo(map);
+
+      if (previousNumMarkers !== quotes.length) {
+        var mostRecentMarker = markers[markers.length-1];
+        map.setView(mostRecentMarker.getLatLng());
+
+        if (mostRecentMarker.quote.autoshow === true) {
+          pause();
+          mostRecentMarker.openPopup();
+        }
+      }
+    }
+
+
+    cartodb.createLayer(map, 'https://nerik.cartodb.com/api/v2/viz/ba8a2e72-a57e-11e5-9e7c-0e31c9be1b51/viz.json')
+      .addTo(map)
+      .on('done', function(layer) {
+        initUI();
+
+        choroplethSubLayer = layer.getSubLayer(0);
+        var carto = cartoTemplate({candidates: candidates});
+        choroplethSubLayer.setCartoCSS(carto)
+
+        slider.setValue(23);
+        changeDate(23);
+
+        resume();
+      }).on('error', function() {
+        //log the error
+      });
+
+    </script>
+  </body>
+</html>

@@ -57,6 +57,9 @@
       margin-left: -8px;
     }
 
+    .leaflet-popup-content img {
+      width: 100%;
+    }
 
   </style>
 
@@ -179,6 +182,7 @@
     <script type="text/template" class="quotesPopupTemplate">
       <h4><em><%= date %></em></h4>
       <h4><em><%= city %>, <%= state %></em></h4>
+      <img src="<%= image %>">
       <h2><%= content %></h2>
       <button type="button" class="btn btn-primary js-togglePause">► resume playing</button>
     </script>
@@ -326,6 +330,7 @@
           date: moment(quote.date).format('LL'),
           city: quote.city,
           state: quote.state,
+          image: quote.image,
           content: quote.content.replace(/\[(.+)\]\((.+)\)/gi, '<a href=$2>$1</a>')
         })).on('click', function () {
           pause();

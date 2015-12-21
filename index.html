@@ -57,6 +57,23 @@
       margin-left: -8px;
     }
 
+    .trump-marker--new img {
+      animation-name: trumpMarkerNew;
+      animation-iteration-count: 1;
+      animation-timing-function: ease-out;
+      animation-duration: 0.5s;
+      /*animation-delay: 0.2s;*/
+    }
+
+    @keyframes trumpMarkerNew {
+        0% {
+            transform: scale(3);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
     .leaflet-popup-content img {
       width: 100%;
     }
@@ -198,7 +215,7 @@
       <h4><em><%= city %>, <%= state %></em></h4>
       <img src="<%= image %>">
       <h2><%= content %></h2>
-      <button type="button" class="btn btn-primary js-togglePause">► resume playing</button>
+      <button type="button" class="btn btn-primary js-togglePause">▌▌ pause playing</button>
     </script>
 
 
@@ -283,8 +300,9 @@
 
     var resume = function () {
       clearInterval(autoNextDayInterval);
+      nextDay();
       autoNextDayInterval = setInterval(nextDay, 2000);
-      $('.js-togglePause').html('▌▌ pause')
+      $('.js-togglePause').html('▌▌ pause playing')
     }
 
     var pause = function () {
@@ -334,10 +352,14 @@
         previousNumMarkers = quotesLayer.getLayers().length;
         map.removeLayer(quotesLayer);
       };
-      var markers = quotes.map(function (quote) {
+      var markers = quotes.map(function (quote, index) {
+        var classNames = 'trump-marker';
+        if (index === quotes.length-1) {
+          classNames += ' trump-marker--new';
+        }
         var marker = L.marker([quote.lat, quote.lon], {
           icon: L.divIcon({
-            className: 'trump-marker',
+            className: classNames,
             html: '<img src="trumpface.png">'
           })
         }).bindPopup( quotesPopupTemplate({
@@ -359,7 +381,7 @@
         map.setView(mostRecentMarker.getLatLng());
 
         if (mostRecentMarker.quote.autoshow === true) {
-          pause();
+          // pause();
           mostRecentMarker.openPopup();
         }
       }
@@ -376,7 +398,7 @@
         choroplethSubLayer.setCartoCSS(carto)
 
         slider.setValue(23);
-        changeDate(23);
+        // changeDate(23);
 
         resume();
       }).on('error', function() {

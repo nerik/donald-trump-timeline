@@ -157,9 +157,7 @@
       ST_X(the_geom) as lon,
       ST_Y(the_geom) as lat
       FROM trump_quotes
-      WHERE date < '<%= end %>'
-      AND date > '<%= start %>'
-      AND the_geom IS NOT NULL
+      WHERE the_geom IS NOT NULL
       ORDER BY date ASC
     </script>
 
@@ -173,6 +171,7 @@
       <% candidates.forEach(function(candidate){ %>
         @<%= candidate.name %>: <%= candidate.value %>;
       <% }) %>
+      @otherCandidates: <%= otherCandidates.value %>;
 
       #rep_polls_1 {
         polygon-opacity: 1;
@@ -181,11 +180,21 @@
         <% var hachureIndex = 0; %>
 
         <% // basic choropleth %>
+        [_1st=~'.*[<% print(otherCandidates.names.join('|')) %>].*']{
+           polygon-fill: @otherCandidates;
+        }
         <% candidates.forEach(function(candidate){ %>
           [_1st=~'.*<%= candidate.name %>.*']{
              polygon-fill: @<%= candidate.name %>;
 
              <% // for each candidate, generate a hachure style for 2nd candidate %>
+             <% // 1st for other candidates %>
+             [_2nd=~'.*[<% print(otherCandidates.names.join('|')) %>].*'][_3rd='']::hachures<%= hachureIndex %> {
+                polygon-pattern-file: @pattern;
+                image-filters:colorize-alpha(@otherCandidates);
+             }
+
+             <% // then each 2nd principal candidate %>
              <% candidates.forEach(function(secondCandidate){ %>
                 <% if (candidate !== secondCandidate){ %>
                   <% hachureIndex++; %>
@@ -197,6 +206,7 @@
             <% }) %>
            }
         <% }) %>
+
 
         [_3rd!=''] {
           polygon-fill: #AAA;
@@ -237,7 +247,7 @@
         <img src="<%= image %>">
       <% } %>
       <h3><%= content %></h3>
-      <button type="button" class="btn btn-primary js-togglePause">▌▌ pause playing</button>
+      <!-- <button type="button" class="btn btn-primary js-togglePause">▌▌ pause playing</button> -->
     </script>
 
 
@@ -256,24 +266,31 @@
 
 
     var dateAmplitudeDays = 190;
+    var endDate = '2015-12-22';
+
+    var playing;
+
     var candidates = [
       {name:'Trump',  value:'#ff9cce'},
       {name:'Carson',  value:'#00ff00'},
       {name:'Cruz',  value:'#F11810'},
-      {name:'Paul',  value:'#FF9900'},
-      {name:'Huckabee',  value:'#ffff80'},
-      {name:'Bush',  value:'#5CA2D1'},
-      {name:'Walker', value: '#229A00'},
-      {name: 'Kasich', value: '#A16234'}
+      {name:'Bush',  value:'#5CA2D1'}
     ];
 
+    var otherCandidates = {
+      names: ['Walker','Huckabee','Kasich','Paul','Rubio','Fiorina'],
+      value: '#A16234'
+    };
+
     var additionalLegendData = [
+      {name:'Other candidates ('+otherCandidates.names.join(', ')+')',  value: otherCandidates.value},
       {name:'3 or more candidates statistically tied for the lead',  value:'#aaa'},
       {name:'No polling data in last six months',  value:'#fff'},
     ]
 
-
-    var choroplethSubLayer, quotesLayer, slider, autoNextDayInterval;
+    var allQuotes;
+    var quotes = [];
+    var choroplethSubLayer, quotesLayer, slider, autoNextDayTimeout;
     var choroSQLTemplate = _.template($( ".choroSQLTemplate" ).html());
     var quotesSQLTemplate = _.template($( ".quotesSQLTemplate" ).html());
     var quotesPopupTemplate = _.template($( ".quotesPopupTemplate" ).html());
@@ -282,7 +299,11 @@
 
 
     var getMomentFromSlider = function (v) {
-      return moment('2015-12-22').subtract(dateAmplitudeDays - v, 'days');
+      return moment(endDate).subtract(dateAmplitudeDays - v, 'days');
+    }
+
+    var getSliderOffsetFromMoment = function (m) {
+      return dateAmplitudeDays - moment(endDate).diff(m, 'days') - 1;
     }
 
     var initUI = function () {
@@ -303,7 +324,8 @@
         ],
         value: 0
       }).on('slideStop', function(e) {
-        changeDate(slider.getValue());
+        pause();
+        changeDate(getMomentFromSlider(slider.getValue()), true);
       }).on('slide', function (e) {
         pause();
       });
@@ -314,14 +336,14 @@
 
       // legend
       new cdb.geo.ui.Legend.Custom({
-        title: "1st and 2nd place in the polls",
+        title: "1st in the polls / tie for 1st place",
         data: candidates.concat(additionalLegendData)
       }).addTo(".legend");
 
     }
 
     var togglePause = function () {
-      if (autoNextDayInterval) {
+      if (playing) {
         pause();
       } else {
         resume();
@@ -329,30 +351,34 @@
     }
 
     var resume = function () {
-      clearInterval(autoNextDayInterval);
+      playing = true;
       nextDay();
-      autoNextDayInterval = setInterval(nextDay, 2000);
-      $('.js-togglePause').html('▌▌ pause playing')
+      $('.js-togglePause').html('▌▌ pause playing');
     }
 
     var pause = function () {
-      clearInterval(autoNextDayInterval);
-      autoNextDayInterval = null;
-      $('.js-togglePause').html('► resume playing')
+      playing = false;
+      clearTimeout(autoNextDayTimeout);
+      $('.js-togglePause').html('► resume playing');
 
     }
 
     var nextDay = function () {
-      var sliderValue = slider.getValue()+1;
-      if (sliderValue > dateAmplitudeDays) {
+      var nextQuote = allQuotes[quotes.length];
+      if (!nextQuote) {
+        pause();
         return;
       }
-      changeDate(sliderValue);
+      var m = moment(nextQuote.date);
+      var sliderValue = getSliderOffsetFromMoment(m);
       slider.setValue(sliderValue);
+
+      var autoShowPopup = changeDate(m);
+      var nextDelay = autoShowPopup ? 3000 : 1750;
+      autoNextDayTimeout = setTimeout(nextDay, nextDelay);
     }
 
-    var changeDate = function (sliderValue) {
-      var m = getMomentFromSlider(sliderValue);
+    var changeDate = function (m, preventViewportChange) {
       var sqlDateEnd = m.format('YYYY-MM-DD');
       var sqlDateStart = m.clone().subtract(6, 'months').format('YYYY-MM-DD');
       var dates = {
@@ -362,21 +388,22 @@
 
       $('.titledate').html(m.format('LL'));
 
-      // prevents a new SQL query on the choro map for dates too close
+      // prevents a new SQL query on the choro map for dates that are too close
       if (!previousQueriedChoroMoment || Math.abs(m.diff(previousQueriedChoroMoment, 'days')) > 5) {
-        console.log('upd sql')
         previousQueriedChoroMoment = m.clone();
         var choroSQL = choroSQLTemplate(dates);
         choroplethSubLayer.setSQL(choroSQL);
       }
 
-      var quotesSQL = quotesSQLTemplate(dates)
-      $.getJSON('https://nerik.cartodb.com/api/v2/sql/?q=' + quotesSQL, function(data) {
-        showMarkers(data.rows);
-      });
+      return showMarkers(m, preventViewportChange);
     }
 
-    function showMarkers(quotes) {
+    function showMarkers(sliderMoment, preventViewportChange) {
+
+      quotes = allQuotes.filter(function (quote) {
+        return moment(quote.date).isBefore(sliderMoment.clone().add(1, 'days'), 'days');
+      })
+
       var previousNumMarkers;
       if (quotesLayer) {
         previousNumMarkers = quotesLayer.getLayers().length;
@@ -410,14 +437,13 @@
       })
       quotesLayer = L.layerGroup(markers).addTo(map);
 
-      if (hasNewMarker && markers.length) {
+      if (!preventViewportChange && hasNewMarker && markers.length) {
         var mostRecentMarker = markers[markers.length-1];
         map.setView(mostRecentMarker.getLatLng());
 
-        if (true) {
-        // if (mostRecentMarker.quote.autoshow === true) {
-          // pause();
+        if (mostRecentMarker.quote.autoshow === true) {
           mostRecentMarker.openPopup();
+          return true;
         }
       }
     }
@@ -429,13 +455,14 @@
         initUI();
 
         choroplethSubLayer = layer.getSubLayer(0);
-        var carto = cartoTemplate({candidates: candidates});
-        choroplethSubLayer.setCartoCSS(carto)
+        var carto = cartoTemplate({candidates: candidates, otherCandidates: otherCandidates});
+        choroplethSubLayer.setCartoCSS(carto);
 
-        slider.setValue(23);
-        // changeDate(23);
-
-        resume();
+        var quotesSQL = quotesSQLTemplate()
+        $.getJSON('https://nerik.cartodb.com/api/v2/sql/?q=' + quotesSQL, function(data) {
+          allQuotes = data.rows;
+          resume();
+        });
       }).on('error', function() {
         //log the error
       });

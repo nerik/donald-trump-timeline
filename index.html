@@ -126,6 +126,10 @@
         }
     }
 
+    .popup-inner--tall {
+      min-height: 380px;
+    }
+
     .leaflet-popup-content img {
       width: 100%;
       margin-top: 10px;
@@ -299,13 +303,15 @@
 
 
     <script type="text/template" class="quotesPopupTemplate">
-      <p><em><%= date %></em></p>
-      <p><b><em><% if (city !== '') { %><%= city %>, <% } %><%= state %></em></b></p>
-      <% if (image) { %>
-        <img src="<%= image %>">
-      <% } %>
-      <h3><%= content %></h3>
-      <!-- <button type="button" class="btn btn-primary js-togglePause">▌▌ pause playing</button> -->
+      <div class="<% if (image) { %>popup-inner--tall<% } %>">
+        <p><em><%= date %></em></p>
+        <p><b><em><% if (city !== '') { %><%= city %>, <% } %><%= state %></em></b></p>
+        <% if (image) { %>
+          <img src="<%= image %>">
+        <% } %>
+        <h3><%= content %></h3>
+        <!-- <button type="button" class="btn btn-primary js-togglePause">▌▌ pause playing</button> -->
+      </div>
     </script>
 
 

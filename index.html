@@ -44,12 +44,13 @@
     }
 
     #map {
-      width: auto;
+      width: calc(100% - 450px);
       height: 100%;
     }
 
     .navbar {
       min-height: 100px;
+      box-shadow: 0 3px 14px rgba(0,0,0,.2);
     }
 
     #dateSlider {
@@ -64,6 +65,41 @@
       width: 200px;
       height: 40px;
       margin: 30px 30px 0 70px;
+    }
+
+    .legend {
+      position: absolute;
+      right: 0px;
+      top: 100px;
+      width: 450px;
+      padding: 30px;
+      height: calc(100% - 100px);
+      overflow-y: scroll;
+    }
+
+    div.cartodb-legend {
+      position: relative;
+      padding: 0;
+      border: 0;
+      box-shadow: none;
+      right: 0;
+      bottom: 0;
+      margin-bottom: 30px;
+    }
+
+    div.cartodb-legend.custom ul li, div.cartodb-legend .legend-title, .legend p {
+      margin-bottom: 20px;
+      text-transform: none;
+      font-size: 14px;
+      font-weight: normal;
+      line-height: 1.5em;
+      color: 0;
+      height: auto;
+    }
+
+    div.cartodb-legend.custom ul li .bullet {
+      width: 16px;
+      height: 16px;
     }
 
     .trump-marker img {
@@ -121,13 +157,10 @@
         <div class="navbar-header">
           <h1>
           The Donald Trump timeline
-          <a href="#" data-toggle="modal" data-target="#helpModal">About</a>
           </h1>
           <h2>
             <em>Currently showing: <span class="titledate"></span></em>
-
           </h2>
-
         </div>
         <div class="collapse navbar-collapse">
           <ul class="nav navbar-nav navbar-right">
@@ -141,31 +174,25 @@
       </div>
     </nav>
 
-    <div class="modal fade" id="helpModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-      <div class="modal-dialog" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-            <h4 class="modal-title" id="myModalLabel">About the Donald Trump timeline</h4>
-          </div>
-          <div class="modal-body">
-            <p>The states map shows who is leading in the polls. You can click on a state to get the exact results, the date and the source of the poll.</p>
-            <p>Each Trump icon <img class="trump-img" src="trumpface.png">reveals a quote from Donald Trump, or a significant event in Trump's campaign. You can either let the timeline unravel by itself, or use the slider on the top right to navigate to a specific date.</p>
-            <p>This map has been made by <a href="https://twitter.com/nerik">Erik Escoffier</a> with <a href="http://cartodb.com">CartoDB</a>, using CartoDB.js and the SQL API.</p>
-            <p>The source code can be found in this <a href="http://bl.ocks.org/nerik/1dc194efe6247f10b41a">bl.ock</a>.</p>
-            <p>Aggregated data has been originally found on this Wikipedia page : <a href="https://en.wikipedia.org/wiki/Statewide_opinion_polling_for_the_Republican_Party_presidential_primaries,_2016">Statewide opinion polling for the Republican Party presidential primaries, 2016</a></p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div id="container">
 
       <div id="map">
-          <div class="legend"></div>
+
+      </div>
+
+      <div class="legend">
+        <p>The states map shows who was leading, at a given date, in the Republican primaries polls. </p>
+
+        <p>Key:</p>
+        <div class="cartodb-legend-container"></div>
+
+        <p>When two candidates are tied for the lead (within margin of error), the state is displayed with <img src="hachures.png"> hachures.</p>
+
+        <p>You can click on a state to get the exact results, the date and the source of the poll.</p>
+        <p>Each Trump icon <img class="trump-img" src="trumpface.png"> reveals a quote from Donald Trump, or a significant event in Trump's campaign. You can either let the timeline unravel by itself, or use the slider on the top right to navigate to a specific date.</p>
+        <p>This map has been made with <a href="http://cartodb.com">CartoDB</a>, using CartoDB.js and the SQL API.</p>
+        <p>The source code can be found in this <a href="http://bl.ocks.org/nerik/1dc194efe6247f10b41a">bl.ock</a>.</p>
+        <p>Aggregated data has been originally found on this Wikipedia page : <a href="https://en.wikipedia.org/wiki/Statewide_opinion_polling_for_the_Republican_Party_presidential_primaries,_2016">Statewide opinion polling for the Republican Party presidential primaries, 2016</a></p>
       </div>
 
     </div><!-- /.container -->
@@ -286,7 +313,7 @@
 
     <script type="text/template" class="quotesPopupTemplate">
       <p><em><%= date %></em></p>
-      <p><em><%= city %>, <%= state %></em></p>
+      <p><b><em><% if (city !== '') { %><%= city %>, <% } %><%= state %></em></b></p>
       <% if (image) { %>
         <img src="<%= image %>">
       <% } %>
@@ -379,10 +406,12 @@
       });
 
       // legend
-      new cdb.geo.ui.Legend.Custom({
-        title: "1st in the polls / tie for 1st place",
+      var legend = new cdb.geo.ui.Legend.Custom({
         data: candidates.concat(additionalLegendData)
-      }).addTo(".legend");
+      });
+      legend.addTo('')
+      legend.$el.prependTo(".cartodb-legend-container")
+
 
     }
 
@@ -400,26 +429,34 @@
       $('.js-togglePause').html('▌▌ pause playing');
     }
 
-    var pause = function () {
+    var pause = function (atEnd) {
       playing = false;
       clearTimeout(autoNextDayTimeout);
-      $('.js-togglePause').html('► resume playing');
+      $('.js-togglePause').html((atEnd) ? '► restart' : '► resume playing');
 
     }
 
     var nextDay = function () {
       var nextQuote = allQuotes[quotes.length];
-      if (!nextQuote) {
-        pause();
-        return;
+      var m;
+
+      if (nextQuote) {
+        m = moment(nextQuote.date);
+      } else {
+        m = moment(endDate);
+        pause(true);
       }
-      var m = moment(nextQuote.date);
       var sliderValue = getSliderOffsetFromMoment(m);
       slider.setValue(sliderValue);
 
       var autoShowPopup = changeDate(m);
-      var nextDelay = autoShowPopup ? 3000 : 1750;
-      autoNextDayTimeout = setTimeout(nextDay, nextDelay);
+
+      if (nextQuote) {
+        var nextDelay = autoShowPopup ? 3000 : 1000;
+        autoNextDayTimeout = setTimeout(nextDay, nextDelay);
+      } else {
+        quotes = [];
+      }
     }
 
     var changeDate = function (m, preventViewportChange) {
@@ -485,7 +522,7 @@
         var mostRecentMarker = markers[markers.length-1];
         map.setView(mostRecentMarker.getLatLng());
 
-        if (mostRecentMarker.quote.autoshow === true) {
+        if (true /*mostRecentMarker.quote.autoshow === true*/) {
           mostRecentMarker.openPopup();
           return true;
         }

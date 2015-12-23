@@ -363,11 +363,11 @@
 
 
     var getMomentFromSlider = function (v) {
-      return moment(endDate).subtract(dateAmplitudeDays - v, 'days');
+      return moment(endDate).utcOffset(0).subtract(dateAmplitudeDays - v, 'days');
     }
 
     var getSliderOffsetFromMoment = function (m) {
-      return dateAmplitudeDays - moment(endDate).diff(m, 'days') - 1;
+      return dateAmplitudeDays - moment(endDate).utcOffset(0).diff(m, 'days') ;
     }
 
     var initUI = function () {
@@ -434,9 +434,9 @@
       var m;
 
       if (nextQuote) {
-        m = moment(nextQuote.date);
+        m = moment(nextQuote.date).utcOffset(0);
       } else {
-        m = moment(endDate);
+        m = moment(endDate).utcOffset(0);
         pause(true);
       }
       var sliderValue = getSliderOffsetFromMoment(m);
@@ -475,7 +475,7 @@
     function showMarkers(sliderMoment, preventViewportChange) {
 
       quotes = allQuotes.filter(function (quote) {
-        return moment(quote.date).isBefore(sliderMoment.clone().add(1, 'days'), 'days');
+        return moment(quote.date).utcOffset(0).isBefore(sliderMoment.clone().add(1, 'days'), 'days');
       })
 
       var previousNumMarkers;
@@ -498,7 +498,7 @@
             html: '<img class="trump-img" src="trumpface.png">'
           })
         }).bindPopup( quotesPopupTemplate({
-          date: moment(quote.date).format('LL'),
+          date: moment(quote.date).utcOffset(0).format('LL'),
           city: quote.city,
           state: quote.state,
           image: quote.image,

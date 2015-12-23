@@ -257,6 +257,14 @@
         <% // basic choropleth %>
         [_1st=~'.*[<% print(otherCandidates.names.join('|')) %>].*']{
            polygon-fill: @otherCandidates;
+
+           <% candidates.forEach(function(secondCandidate){ %>
+              <% hachureIndex++; %>
+              [_2nd=~'.*<%= secondCandidate.name %>.*'][_3rd='']::hachures<%= hachureIndex %> {
+                 polygon-pattern-file: @pattern;
+                 image-filters:colorize-alpha(@<%= secondCandidate.name %>);
+              }
+          <% }) %>
         }
         <% candidates.forEach(function(candidate){ %>
           [_1st=~'.*<%= candidate.name %>.*']{

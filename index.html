@@ -540,6 +540,7 @@
         choroplethSubLayer = layer.getSubLayer(0);
         var carto = cartoTemplate({candidates: candidates, otherCandidates: otherCandidates});
         choroplethSubLayer.setCartoCSS(carto);
+        console.log(carto)
 
         var quotesSQL = quotesSQLTemplate()
         $.getJSON('https://nerik.cartodb.com/api/v2/sql/?q=' + quotesSQL, function(data) {

@@ -19,19 +19,14 @@
   </head>
 
   <style>
-    html, body, #container {
+    html, body{
       height: 100%;
       width: 100%;
-      overflow: hidden;
-    }
-
-    body {
-      padding-top: 100px;
     }
 
     h1 {
-      font-size: 30px;
-      margin-bottom: 5px;
+      font-size: 26px;
+      margin: 5px 0 5px;
     }
 
     h1 a {
@@ -39,42 +34,43 @@
     }
 
     h2 {
-      font-size: 20px;
+      font-size: 18px;
       margin: 0;
     }
 
     #map {
-      width: calc(100% - 450px);
-      height: 100%;
+      width: 100%;
+      min-height: 530px;
     }
 
     .navbar {
       min-height: 100px;
       box-shadow: 0 3px 14px rgba(0,0,0,.2);
+      margin-bottom: 0;
+      z-index: 189;
+    }
+
+    .navbar-title {
+      margin: 0 0 10px 10px;
     }
 
     #dateSlider {
-      margin-top: 40px;
+      margin-top: 30px;
     }
 
     .slider.slider-horizontal {
-      width: 350px;
+      margin: 0 10%;
+      width: 80%;
     }
 
     .togglePause-btn-top {
-      width: 200px;
+      width: 90%;
       height: 40px;
-      margin: 30px 30px 0 70px;
+      margin: 30px 5% 10px 5%;
     }
 
     .legend {
-      position: absolute;
-      right: 0px;
-      top: 100px;
-      width: 450px;
       padding: 30px;
-      height: calc(100% - 100px);
-      overflow-y: scroll;
     }
 
     div.cartodb-legend {
@@ -88,7 +84,7 @@
     }
 
     div.cartodb-legend.custom ul li, div.cartodb-legend .legend-title, .legend p {
-      margin-bottom: 20px;
+      margin-bottom: 10px;
       text-transform: none;
       font-size: 14px;
       font-weight: normal;
@@ -107,7 +103,7 @@
     }
 
     .trump-img {
-      width: 26px;
+      width: 18px;
     }
 
     .trump-marker--new img {
@@ -127,7 +123,7 @@
     }
 
     .popup-inner--tall {
-      min-height: 380px;
+      min-height: 300px;
     }
 
     .leaflet-popup-content img {
@@ -142,6 +138,7 @@
 
     .leaflet-popup-content h3 {
       margin-bottom: 30px;
+      font-size: 20px;
     }
 
     .leaflet-container a {
@@ -152,54 +149,59 @@
       border-radius: 0;
     }
 
+    .legend .about {
+      font-size: 12px;
+      font-style: italic;
+    }
+
   </style>
 
   <body>
 
-    <nav class="navbar navbar-fixed-top">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <h1>
-          The Donald Trump timeline
-          </h1>
-          <h2>
-            <em>Currently showing: <span class="titledate"></span></em>
-          </h2>
+    <nav class="navbar">
+      <div class="row">
+        <div class="col-sm-5">
+          <div class="navbar-title">
+            <h1>
+              The Donald Trump timeline
+            </h1>
+            <h2>
+              <em>Currently showing: <span class="titledate"></span></em>
+            </h2>
+
+          </div>
+
         </div>
-        <div class="collapse navbar-collapse">
-          <ul class="nav navbar-nav navbar-right">
-            <li>
-              <input style="display:none" id="dateSlider" data-slider-id='dateSlider' type="text" data-slider-min="0" data-slider-max="20" data-slider-step="1" data-slider-value="14"/>
-            </li>
-            <li>
-               <button type="button" class="btn btn-primary js-togglePause togglePause-btn-top"></button>
-          </ul>
-        </diV>
+        <div class="col-sm-4">
+          <input style="display:none" id="dateSlider" data-slider-id='dateSlider' type="text" data-slider-min="0" data-slider-max="20" data-slider-step="1" data-slider-value="14"/>
+        </div>
+        <div class="col-sm-3">
+
+          <button type="button" class="btn btn-primary js-togglePause togglePause-btn-top"></button>
+
+        </div>
+
       </div>
     </nav>
 
-    <div id="container">
 
-      <div id="map">
+    <div id="map">
 
-      </div>
+    </div>
 
-      <div class="legend">
-        <p>The states map shows who was leading, at a given date, in the Republican primaries polls. </p>
+    <div class="legend">
+      <p>The states map shows who was leading, at a given date, in the Republican primaries polls. </p>
 
-        <p>Key:</p>
-        <div class="cartodb-legend-container"></div>
+      <p>Key:</p>
+      <div class="cartodb-legend-container"></div>
 
-        <p>When two candidates are tied for the lead (within margin of error), the state is displayed with <img src="hachures.png"> hachures.</p>
+      <p>When two candidates are tied for the lead (within margin of error), the state is displayed with <img src="hachures.png"> hachures.</p>
 
-        <p>You can click on a state to get the exact results, the date and the source of the poll.</p>
-        <p>Each Trump icon <img class="trump-img" src="trumpface.png"> reveals a quote from Donald Trump, or a significant event in Trump's campaign. You can either let the timeline unravel by itself, or use the slider on the top right to navigate to a specific date.</p>
-        <p>This map has been made with <a href="http://cartodb.com">CartoDB</a>, using CartoDB.js and the SQL API.</p>
-        <p>The source code can be found in this <a href="http://bl.ocks.org/nerik/1dc194efe6247f10b41a">bl.ock</a>.</p>
-        <p>Aggregated data has been originally found on this Wikipedia page : <a href="https://en.wikipedia.org/wiki/Statewide_opinion_polling_for_the_Republican_Party_presidential_primaries,_2016">Statewide opinion polling for the Republican Party presidential primaries, 2016</a></p>
-      </div>
+      <p>You can click on a state to get the exact results, the date and the source of the poll.</p>
+      <p>Each Trump icon <img class="trump-img" src="trumpface.png"> reveals a quote from Donald Trump, or a significant event in Trump's campaign. You can either let the timeline unravel by itself, or use the slider on the top right to navigate to a specific date.</p>
+      <p class="about">This map has been made with <a href="http://cartodb.com">CartoDB</a>, using CartoDB.js and the SQL API. The source code can be found in this <a href="http://bl.ocks.org/nerik/1dc194efe6247f10b41a">bl.ock</a>. Aggregated data has been originally found on this Wikipedia page : <a href="https://en.wikipedia.org/wiki/Statewide_opinion_polling_for_the_Republican_Party_presidential_primaries,_2016">Statewide opinion polling for the Republican Party presidential primaries, 2016</a></p>
+    </div>
 
-    </div><!-- /.container -->
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
     <script src="http://libs.cartocdn.com/cartodb.js/v3/3.15/cartodb.js"></script>
@@ -330,7 +332,8 @@
 
     var map = new L.Map('map', {
       center: [40.1,-100.3],
-      zoom: 5
+      zoom: 5,
+      scrollWheelZoom: false
     });
 
     L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_nolabels/{z}/{x}/{y}.png',{
